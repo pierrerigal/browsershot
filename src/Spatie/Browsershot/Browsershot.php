@@ -168,7 +168,7 @@ class Browsershot {
             page.viewportSize = { width: 320, height: 568 };
             page.open('" . $this->URL . "', function() {
                window.setTimeout(function(){
-                page.render('" . $targetFile . "-mob');
+                page.render('" . $targetFile . "-mob.png');
                 phantom.exit();
             }, 3000); // give phantomjs 5 seconds to process all javascript
         });";
@@ -181,18 +181,18 @@ class Browsershot {
 
         fclose($tempJsFileHandle2);
 
-        if (! file_exists($targetFile.'-mob') OR filesize($targetFile.'-mob') < 1024)
+        if (! file_exists($targetFile.'-mob.png') OR filesize($targetFile.'-mob.png') < 1024)
         {
             throw new Exception('could not create screenshot');
         }
 
         $mob=new ImageManager();
-        $mob->make($targetFile.'-mob')->crop(320, 568, 0, 0)->resize(247,437)->save($targetFile.'-mob', 100);
+        $mob->make($targetFile.'-mob.png')->crop(320, 568, 0, 0)->resize(247,437)->save($targetFile.'-mob.png', 100);
 
         $ipn = new ImageManager();
         $ipn->make(public_path().'/assets/img/masque-iphone.png')
-            ->insert($targetFile.'-mob','top-left',32,98)
-            ->save($targetFile.'-mob', 100);
+            ->insert($targetFile.'-mob.png','top-left',32,98)
+            ->save($targetFile.'-mob.png', 100);
 
         $sc= new ImageManager();
         $sc->make($targetFile)->crop($this->width, $this->height, 0, 0)->save($targetFile, 100);
@@ -200,11 +200,13 @@ class Browsershot {
         $mask = new ImageManager();
         $mask->make(public_path().'/assets/img/masque-chrome.png')
             ->insert($targetFile,'top-left',56,104)
-            ->insert($targetFile.'-mob','bottom-right',134,42)
+            ->insert($targetFile.'-mob.png','bottom-right',134,42)
             ->resize(600, null, function ($constraint) {
                     $constraint->aspectRatio();
                 })
             ->save($targetFile, 100);
+
+        unlink($targetFile.'-mob.png');
 
         return true;
     }
