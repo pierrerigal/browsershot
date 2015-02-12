@@ -144,7 +144,7 @@ class Browsershot {
                window.setTimeout(function(){
                 page.render('" . $targetFile . "');
                 phantom.exit();
-            }, 5000); // give phantomjs 5 seconds to process all javascript
+            }, 3000); // give phantomjs 5 seconds to process all javascript
         });";
 
         fwrite($tempJsFileHandle, $fileContent);
@@ -160,10 +160,51 @@ class Browsershot {
             throw new Exception('could not create screenshot');
         }
 
-        $imageManager = new ImageManager();
-        $imageManager->make($targetFile)
-            ->crop($this->width, $this->height, 0, 0)
-            ->save($targetFile, 60);
+        $tempJsFileHandle2 = tmpfile();
+
+        $fileContent2= "
+            var page = require('webpage').create();
+            page.settings.javascriptEnabled = true;
+            page.viewportSize = { width: 320, height: 568 };
+            page.open('" . $this->URL . "', function() {
+               window.setTimeout(function(){
+                page.render('mobile-" . $targetFile . "');
+                phantom.exit();
+            }, 3000); // give phantomjs 5 seconds to process all javascript
+        });";
+
+        fwrite($tempJsFileHandle2, $fileContent2);
+        $tempFileName2 = stream_get_meta_data($tempJsFileHandle2)['uri'];
+        $cmd2 = escapeshellcmd("{$this->binPath} " . $tempFileName2);
+
+        shell_exec($cmd2);
+
+        fclose($tempJsFileHandle2);
+
+        if (! file_exists('mobile-'.$targetFile) OR filesize('mobile-'.$targetFile) < 1024)
+        {
+            throw new Exception('could not create screenshot');
+        }
+
+        $mob=new ImageManager();
+        $mob->make('mobile-'.$targetFile)->crop(320, 568, 0, 0)->resize(247,437)->save('mobile-'.$targetFile, 100);
+
+        $ipn = new ImageManager();
+        $ipn->make(public_path().'/assets/img/masque-iphone.png')
+            ->insert('mobile-'.$targetFile,'top-left',32,98)
+            ->save('mobile-'.$targetFile, 100);
+
+        $sc= new ImageManager();
+        $sc->make($targetFile)->crop($this->width, $this->height, 0, 0)->save($targetFile, 100);
+
+        $mask = new ImageManager();
+        $mask->make(public_path().'/assets/img/masque-chrome.png')
+            ->insert($targetFile,'top-left',56,104)
+            ->insert('mobile-'.$targetFile,'bottom-right',134,42)
+            ->resize(600, null, function ($constraint) {
+                    $constraint->aspectRatio();
+                })
+            ->save($targetFile, 100);
 
         return true;
     }
